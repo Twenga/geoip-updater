@@ -234,6 +234,8 @@ class GeoIpUpdater {
                     throw new \Exception($sDbFile.' is empty.');
                 }
             }
+        } else {
+            throw new \Exception('There are no file to check.');
         }
     }
 }
