@@ -36,5 +36,5 @@ try {
             break;
     }
 } catch (\Exception $oException) {
-    $oLogger->log("KO => ".$oException->getMessage());
+    $oLogger->log("Update process stopped => ".$oException->getMessage());
 }
