@@ -29,19 +29,9 @@ class GeoIpUpdater {
     protected $_oLogger;
 
     /**
-     * Maximum number of archived DB files versions
-     */
-    const MAX_ARCHIVED_DB_VERSIONS = 10;
-
-    /**
      * File that holds the version for a given set of DB files
      */
     const DB_VERSION_FILE_NAME = 'hash';
-
-    /**
-     * Compressed file that that contains all DB files for a given set.
-     */
-    const PACKED_DB_FILE_NAME = 'pack.tar';
 
     /**
      * File that contains a list of blacklisted versions.
@@ -86,7 +76,6 @@ class GeoIpUpdater {
         } elseif (!is_writable($this->_sDbPath)) {
             throw new \Exception($this->_sDbPath.' is not writable.');
         }
-        $this->_oLogger->log('Current DB version is '.geoip_database_info());
 
         //Loading IP and URL's lists
         $this->_aIps = $this->_csvToArray(IP_LIST_CSV);
@@ -108,7 +97,7 @@ class GeoIpUpdater {
         $this->_retrieveDbFiles();
         $this->_checkDbFiles();
         $this->_archiveDbFiles();
-        $this->_loadDbFiles();
+        $this->_loadDbFiles($this->_sTmpDbPath);
         if (!$this->_validateDbFiles()) {
             $this->_rollbackToPrevious();
             $this->_blackListVersion($this->_getDbVersion($this->_sTmpDbPath)); //blacklisted loaded DB version
@@ -126,34 +115,31 @@ class GeoIpUpdater {
     }
 
     /**
-     * Roll back mode
+     * Rollback mode
      * @throws Exception
      */
     public function _rollbackToPrevious() {
         //Which version should be loaded? If current version is in the archives, we load the previous one, otherwise, we load latest archived version.
-        $aArchivedDbVersions = $this->_scanDir($this->_sArchiveDbPath, 1);
-        $iLevel = array_search($this->_getDbVersion($this->_sDbPath), $aArchivedDbVersions);
-        if ($iLevel === false) {
-            $iLevel = 0;
-        } else {
-            $iLevel++;
+        $aArchivedDbFolders = $this->_scanDir($this->_sArchiveDbPath, 1);
+        $CurrentVersion = $this->_getDbVersion($this->_sDbPath);
+        $this->_oLogger->log('Current version : '.$CurrentVersion);
+        $iLevel = 0;
+        foreach ($aArchivedDbFolders as $iLevel => $sArchivedDbFolder) {
+            $aArchivedDbFolder = explode('_', $sArchivedDbFolder);
+            $sArchivedDbVersion = isset($aArchivedDbFolder[1])?$aArchivedDbFolder[1]:null;
+            if ($sArchivedDbVersion == $CurrentVersion) {
+                break;
+            }
         }
-        $aPreviousDbVersion = array_slice($aArchivedDbVersions, $iLevel, 1);
+        $iLevel++;
+        $aPreviousDbVersion = array_slice($aArchivedDbFolders, $iLevel, 1);
         if (is_array($aPreviousDbVersion) && count($aPreviousDbVersion)) {
             $sPreviousDbVersion = $aPreviousDbVersion[0];
             $this->_oLogger->log('Rolling back to version '.$sPreviousDbVersion);
             $sPreviousDbVersionPath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sPreviousDbVersion;
-            $aDbFiles = $this->_scanDir($sPreviousDbVersionPath);
-            if (is_array($aDbFiles)) {
-                foreach ($aDbFiles as $sDbFile) {
-                    $this->_oLogger->log('Loading '.$sPreviousDbVersionPath.DIRECTORY_SEPARATOR.$sDbFile.' to '.$this->_sDbPath.DIRECTORY_SEPARATOR.$sDbFile);
-                    copy($sPreviousDbVersionPath.DIRECTORY_SEPARATOR.$sDbFile, $this->_sDbPath.DIRECTORY_SEPARATOR.$sDbFile);
-                }
-            } else {
-                throw new \Exception('No db file to _rollbackToPrevious to!');
-            }
+            $this->_loadDbFiles($sPreviousDbVersionPath);
         } else {
-            throw new \Exception('No archive to _rollbackToPrevious to!');
+            throw new \Exception('No archive to rollback to!');
         }
     }
 
@@ -165,7 +151,8 @@ class GeoIpUpdater {
         $this->_oLogger->log('There are '.count($this->_aIps).' IP addresses to test.');
         foreach ($this->_aIps as $aIp) {
             $this->_oLogger->log('Testing IP : '.$aIp[0].' against country code : '.$aIp[1]);
-            $sCode = geoip_country_code_by_name($aIp[0]);
+            $sCmd = 'php -r "echo geoip_country_code_by_name(\''.$aIp[0].'\');"';
+            $sCode = exec($sCmd, $aOutput);
             if ($sCode != $aIp[1]) {
                 $this->_oLogger->log('Validation failed, returned country code is "'.$sCode.'"');
                 return false;
@@ -177,20 +164,29 @@ class GeoIpUpdater {
     /**
      * Moves the temporary DB files to their final destination. This actually updates the DB files.
      * Alos checks that the new version is different from current version before loading.
+     * @param string $sPath
+     * @throws Exception
      */
-    protected function _loadDbFiles() {
+    protected function _loadDbFiles($sPath) {
         //Checking current DB files are up to date.
-        $sNewVersion = $this->_getDbVersion($this->_sTmpDbPath);
+        $sNewVersion = $this->_getDbVersion($sPath);
         $sCurrentVersion = $this->_getDbVersion($this->_sDbPath);
         if ($sNewVersion == $sCurrentVersion) {
             throw new \Exception('Current version '.$sCurrentVersion.' is up to date.');
         }
-        $aDbFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*");
-        if (is_array($aDbFiles)) {
+
+        //Loading files
+        $aDbFiles = glob($sPath.DIRECTORY_SEPARATOR."*");
+        if (is_array($aDbFiles) && count($aDbFiles) > 1) {
+            if (!in_array($sPath.DIRECTORY_SEPARATOR.self::DB_VERSION_FILE_NAME, $aDbFiles)) {
+                throw new \Exception('Cannot load DB files from '.$sPath.', there is no hash file.');
+            }
             foreach ($aDbFiles as $sDbFile) {
                 $this->_oLogger->log('Loading '.$sDbFile.' to '.$this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
                 copy($sDbFile, $this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
             }
+        } else {
+            throw new \Exception('Cannot load DB files from '.$sPath.', there are no files!.');
         }
     }
 
@@ -201,7 +197,7 @@ class GeoIpUpdater {
     protected function _archiveDbFiles() {
         //Cleaning older versions
         $aArchivedDbVersions = $this->_scanDir($this->_sArchiveDbPath, 1);
-        $aOlderDbVersions = array_slice($aArchivedDbVersions, self::MAX_ARCHIVED_DB_VERSIONS);
+        $aOlderDbVersions = array_slice($aArchivedDbVersions, MAX_ARCHIVED_DB_VERSIONS);
         if (is_array($aOlderDbVersions) && !empty($aOlderDbVersions)) {
             $this->_oLogger->log('There are '.count($aArchivedDbVersions).' archived versions, the oldest will be removed.');
             foreach ($aOlderDbVersions as $sOlderDbVersion) {
@@ -213,7 +209,7 @@ class GeoIpUpdater {
         }
 
         //Creating archive with newly retrieved db files
-        $sArchiveDbPath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$this->_getDbVersion($this->_sTmpDbPath);
+        $sArchiveDbPath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.date('YmdHis').'_'.$this->_getDbVersion($this->_sTmpDbPath);
         if (is_dir($sArchiveDbPath)) {
             $this->_oLogger->log('Archive for '.$sArchiveDbPath.' already exists.');
         } else {
@@ -243,7 +239,6 @@ class GeoIpUpdater {
             }
             $sUnzippedData = @gzread($rZp, 2097152); // 2MB
             @gzclose($rZp);
-
             // Check we have data
             if (strlen($sUnzippedData) > 0) {
                 // Write data to local file
@@ -291,28 +286,26 @@ class GeoIpUpdater {
      * @throws Exception
      */
     protected function _getDbVersion($sPath) {
-        $this->_oLogger->log('Getting version for DB files in '.$sPath);
+        //$this->_oLogger->log('Getting version for DB files in '.$sPath);
         if (is_dir($sPath)) {
             $VersionFilePath = $sPath.DIRECTORY_SEPARATOR.self::DB_VERSION_FILE_NAME;
 
             //Check for version file, if exists, return content
             if (file_exists($VersionFilePath)) {
                 $sVersion = file_get_contents($VersionFilePath);
-                $this->_oLogger->log('Found version '.$sVersion.' in '.$VersionFilePath);
+                //$this->_oLogger->log('Found version '.$sVersion.' in '.$VersionFilePath);
             } else {
-                $this->_oLogger->log('Building version from db files.');
-                $sPackedFilePath = $sPath.DIRECTORY_SEPARATOR.self::PACKED_DB_FILE_NAME;
-                if (!file_exists($sPackedFilePath)) {
-                    $this->_oLogger->log('Packing DB files to '.$sPackedFilePath);
-                    $aDbFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*.dat"); //archiving db files.
-                    if (is_array($aDbFiles)) {
-                        foreach ($aDbFiles as $sDbFile) {
-                            file_put_contents($sPackedFilePath, file_get_contents($sDbFile), FILE_APPEND);
-                        }
-                    }
+                $this->_oLogger->log('Building version from DB files.');
+                $aDbFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*.dat"); //archiving db files.
+                if (!is_array($aDbFiles) || count($aDbFiles) < 1) {
+                    throw new \Exception('Could not get DB version, there are no .dat files in '.$this->_sTmpDbPath);
                 }
-                $sVersion = date('Ymd').'_'.sha1(file_get_contents($sPackedFilePath));
-                $this->_oLogger->log('Getting packed version '.$sVersion.' and writing it to file'.$VersionFilePath);
+                $sDbContents = '';
+                foreach ($aDbFiles as $sDbFile) {
+                    $sDbContents = file_get_contents($sDbFile);
+                }
+                $sVersion = sha1($sDbContents);
+                $this->_oLogger->log('Calculated version '.$sVersion.' and writing it to file'.$VersionFilePath);
                 if (!@file_put_contents($VersionFilePath, $sVersion)) {
                     $this->_oLogger->log('Could not write version to file '.$VersionFilePath);
                 }
@@ -349,16 +342,22 @@ class GeoIpUpdater {
      * @return bool
      */
     protected function _blackListVersion($sVersion) {
+        //Writing version in blacklist file
         $this->_oLogger->log('Blacklisting '.$sVersion);
         $sBlackistFilePath = GEOIP_DOCROOT.DIRECTORY_SEPARATOR.self::BLACKLIST_FILE_NAME;
         if (!@file_put_contents($sBlackistFilePath, $sVersion."\n", FILE_APPEND)) {
             $this->_oLogger->log('Could not blacklist version '.$sVersion.' in '.$sBlackistFilePath);
         }
 
-        $sArchivePath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sVersion;
-        if (is_dir($sArchivePath)) {
-            $this->_oLogger->log('Removing archive for '.$sVersion);
-            $this->_emptyDir($sArchivePath, true);
+        //Removing blacklisted archive
+        $aArchives = glob($this->_sArchiveDbPath.DIRECTORY_SEPARATOR."*_".$sVersion);
+        if (is_array($aArchives)) {
+            foreach ($aArchives as $sArchivePath) {
+                if (strpos($sArchivePath, $sVersion)) {
+                    $this->_oLogger->log('Removing archive for '.$sVersion);
+                    $this->_emptyDir($sArchivePath, true);
+                }
+            }
         }
     }
 
