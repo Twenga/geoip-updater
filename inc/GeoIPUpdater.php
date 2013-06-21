@@ -296,7 +296,7 @@ class GeoIpUpdater {
                 //$this->_oLogger->log('Found version '.$sVersion.' in '.$VersionFilePath);
             } else {
                 $this->_oLogger->log('Building version from DB files.');
-                $aDbFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*.dat"); //archiving db files.
+                $aDbFiles = glob($sPath.DIRECTORY_SEPARATOR."*.dat");
                 if (!is_array($aDbFiles) || count($aDbFiles) < 1) {
                     throw new \Exception('Could not get DB version, there are no .dat files in '.$this->_sTmpDbPath);
                 }
