@@ -209,9 +209,11 @@ class GeoIpUpdater {
         }
 
         //Creating archive with newly retrieved db files
-        $sArchiveDbPath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.date('YmdHis').'_'.$this->_getDbVersion($this->_sTmpDbPath);
-        if (is_dir($sArchiveDbPath)) {
-            $this->_oLogger->log('Archive for '.$sArchiveDbPath.' already exists.');
+        $sVersionToArchive = $this->_getDbVersion($this->_sTmpDbPath);
+        $sArchiveDbPath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.date('YmdHis').'_'.$sVersionToArchive;
+        $aExistingArchives = glob($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.'*_'.$sVersionToArchive);
+        if (is_array($aExistingArchives) && count($aExistingArchives) > 0) {
+            $this->_oLogger->log('Archive for version'.$sVersionToArchive.' already exists in '.implode(' ', $aExistingArchives));
         } else {
             $this->_oLogger->log('Archiving DB files from '.$this->_sTmpDbPath.' in '.$sArchiveDbPath);
             mkdir($sArchiveDbPath, 0777, true);
@@ -298,11 +300,11 @@ class GeoIpUpdater {
                 $this->_oLogger->log('Building version from DB files.');
                 $aDbFiles = glob($sPath.DIRECTORY_SEPARATOR."*.dat");
                 if (!is_array($aDbFiles) || count($aDbFiles) < 1) {
-                    throw new \Exception('Could not get DB version, there are no .dat files in '.$this->_sTmpDbPath);
+                    throw new \Exception('Could not get DB version, there are no .dat files in '.$sPath);
                 }
                 $sDbContents = '';
                 foreach ($aDbFiles as $sDbFile) {
-                    $sDbContents = file_get_contents($sDbFile);
+                    $sDbContents .= file_get_contents($sDbFile);
                 }
                 $sVersion = sha1($sDbContents);
                 $this->_oLogger->log('Calculated version '.$sVersion.' and writing it to file'.$VersionFilePath);
