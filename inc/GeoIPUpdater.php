@@ -105,7 +105,7 @@ class GeoIpUpdater {
     }
 
     /**
-     * Update mode
+     * Rollback mode
      */
     public function rollback() {
         $this->_rollbackToPrevious();
@@ -148,14 +148,19 @@ class GeoIpUpdater {
      * @return bool
      */
     protected function _validateDbFiles() {
-        $this->_oLogger->log('There are '.count($this->_aIps).' IP addresses to test.');
-        foreach ($this->_aIps as $aIp) {
-            $this->_oLogger->log('Testing IP : '.$aIp[0].' against country code : '.$aIp[1]);
-            $sCmd = 'php -r "echo geoip_country_code_by_name(\''.$aIp[0].'\');"';
-            $sCode = exec($sCmd, $aOutput);
-            if ($sCode != $aIp[1]) {
-                $this->_oLogger->log('Validation failed, returned country code is "'.$sCode.'"');
-                return false;
+
+        if(empty($this->_aIps)) {
+            $this->_oLogger->log('There are no IP addresses to test in .'.IP_LIST_CSV);
+        } else {
+            $this->_oLogger->log('There are '.count($this->_aIps).' IP addresses to test.');
+            foreach ($this->_aIps as $aIp) {
+                $this->_oLogger->log('Testing IP : '.$aIp[0].' against country code : '.$aIp[1]);
+                $sCmd = 'php -r "echo geoip_country_code_by_name(\''.$aIp[0].'\');"';
+                $sCode = exec($sCmd, $aOutput);
+                if ($sCode != $aIp[1]) {
+                    $this->_oLogger->log('Validation failed, returned country code is "'.$sCode.'"');
+                    return false;
+                }
             }
         }
         return true;
@@ -231,6 +236,9 @@ class GeoIpUpdater {
      * @throws Exception
      */
     protected function _retrieveDbFiles () {
+        if (empty($this->_aDbFiles)) {
+            throw new \Exception('There are no DB file listed in '.DB_URL_LIST_CSV);
+        }
         $this->_oLogger->log('There are '.count($this->_aDbFiles).' DB files to retrieve.');
         foreach ($this->_aDbFiles as $aDbFileSrc) {
             $sDbFileSrc = $aDbFileSrc[0];

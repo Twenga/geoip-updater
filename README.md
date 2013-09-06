@@ -25,14 +25,14 @@ $ ./install.sh
 
 ### IP addresses
 
-When validation a new set of DB files, GeopIP Updater will use a list of know IP addresses and check that GeoIP returns expected country codes. IP addresses are stored in inc/ip_list.csv. GeoIP Updater comes with a template file which you can populate with your own IP to check. If the file is empty, no validation will be performed. IP addresses must be listed as follows :
+When validating a new set of DB files, GeopIP Updater will use a list of known IP addresses and check that GeoIP returns expected country codes. IP addresses are stored in `inc/ip_list.csv` which you can populate with your own IP addresses to check. If the file is empty, no validation will be performed. IP addresses must be listed as follows :
+`[IP_ADDRESS],[COUNTRY_CODE]
 [IP_ADDRESS],[COUNTRY_CODE]
-[IP_ADDRESS],[COUNTRY_CODE]
-...
+...`
 
 ### DB files URLs
 
-The file inc/db_url_list.csv contains a list of URLs to MaxMind GeoIPLite DB files. GeoIP Updater comes with a default list, which you can update as needed.
+The file `inc/db_url_list.csv` contains a list of URLs to MaxMind GeoIPLite DB files. GeoIP Updater comes with a default list, which you can update as needed.
 
 Note : Default URLs come from http://dev.maxmind.com/geoip/legacy/geolite
 
@@ -43,7 +43,7 @@ Note : Default URLs come from http://dev.maxmind.com/geoip/legacy/geolite
 $ sudo php geoip-updater -v -m update
 ```
 
-When a set of DB files is retrieved, GeoIP Updater computes a 'version' hash (sha1 of all files contents) and will archive these files in a directory for that version. When a set of DB files are not valid, the version is blacklisted and will never be loaded again. When a set is not valid, a rollback is performed automatically.
+When a set of DB files is retrieved, GeoIP Updater computes a 'version' hash (sha1 of all DB files contents) and will archive these files in a directory for that version. When a set of DB files are not valid, the version is blacklisted and will never be loaded again.
 
 ### Rollback
 ```bash
