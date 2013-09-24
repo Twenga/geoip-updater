@@ -235,11 +235,14 @@ class GeoIpUpdater {
         foreach ($this->_aDbFiles as $aDbFileSrc) {
             $sDbFileSrc = $aDbFileSrc[0];
             $this->_oLogger->log('Retrieving DB from '.$sDbFileSrc);
-            $rZp=@gzopen($sDbFileSrc, "r");
+		$sGzip = file_get_contents($sDbFileSrc);
+		$sRest = substr($sGzip, -4);
+		$iGZFileSize = end(unpack("V", $sRest));
+            $rZp = @gzopen($sDbFileSrc, "r");
             if (!$rZp) {
                 throw new \Exception($sDbFileSrc.' could not be retrieved.');
             }
-            $sUnzippedData = @gzread($rZp, 2097152); // 2MB
+            $sUnzippedData = @gzread($rZp, $iGZFileSize);
             @gzclose($rZp);
             // Check we have data
             if (strlen($sUnzippedData) > 0) {
