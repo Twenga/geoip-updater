@@ -26,9 +26,10 @@ $ ./install.sh
 ### IP addresses
 
 When validating a new set of DB files, GeopIP Updater will use a list of known IP addresses and check that GeoIP returns expected country codes. IP addresses are stored in `inc/ip_list.csv` which you can populate with your own IP addresses to check. If the file is empty, no validation will be performed. IP addresses must be listed as follows :
-`[IP_ADDRESS],[COUNTRY_CODE]
+```
 [IP_ADDRESS],[COUNTRY_CODE]
-...`
+[IP_ADDRESS],[COUNTRY_CODE]
+...```
 
 ### DB files URLs
 

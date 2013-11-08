@@ -2,4 +2,4 @@
 conf/config.php
 blacklist.txt
 inc/db_url_list.csv
-inc/ip_list.csv
+inc/validation_list.csv
