@@ -30,7 +30,7 @@ When validating a new set of DB files, GeopIP Updater will use a list of validat
 ```
 [GEOIP_FUNCTION],[IP_HOST],[EXPECTED_RESULT]
 [GEOIP_FUNCTION],[IP_HOST],[EXPECTED_RESULT]
-...```
+```
 
 For now, the expected result can only be specified as a string, that means we can't validate that geoip_record_by_name() works as it returns an array.
 
