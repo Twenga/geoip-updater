@@ -1,6 +1,19 @@
 ChangeLog
 =========
 
+## Version 1.2.6 (2013-11-13)
+
+Features:
+
+  - Extended validation (matches function to IP and expected result)
+  - Checks for valid validation list
+  - First archives the current db files before retrieving the new ones
+  - README updated
+
+Fixes:
+
+  - Malformed validation CSV throws exception with instructions on how to format the CSV file
+
 ## Version 1.2.2 (2013-06-19)
 
 Fixes:

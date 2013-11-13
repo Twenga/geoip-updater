@@ -17,9 +17,9 @@ else
 	cp -p -n "$INC_DIR/db_url_list-dist.csv" "$INC_DIR/db_url_list.csv"
 fi
 
-if { [ -f "$INC_DIR/ip_list.csv" ] ; } then
-	echo "Config file '$INC_DIR/ip_list.csv' already exists."
+if { [ -f "$INC_DIR/validation_list.csv" ] ; } then
+	echo "Config file '$INC_DIR/validation_list.csv' already exists."
 else
-	echo "Copy config file from '$INC_DIR/ip_list-dist.csv' to '$INC_DIR/ip_list.csv'"
-	cp -p -n "$INC_DIR/ip_list-dist.csv" "$INC_DIR/ip_list.csv"
+	echo "Copy config file from '$INC_DIR/validation_list-dist.csv' to '$INC_DIR/validation_list.csv'"
+	cp -p -n "$INC_DIR/validation_list-dist.csv" "$INC_DIR/validation_list.csv"
 fi
