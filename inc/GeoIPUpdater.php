@@ -29,6 +29,16 @@ class GeoIpUpdater {
     protected $_oLogger;
 
     /**
+     *@var FileSystem
+     */
+    protected $_oFileSystem;
+
+    /**
+     * @var Csv
+     */
+    protected $_oCsv;
+
+    /**
      * File that holds the version for a given set of DB files
      */
     const DB_VERSION_FILE_NAME = 'hash';
@@ -55,39 +65,55 @@ class GeoIpUpdater {
      * Checks required folders.
      * Checks whether the GeoIP extension is loaded.
      * @param Logger $oLogger
+     * @param FileSystem $oFileSystem
      * @throws Exception
      */
-    public function __construct(\Logger $oLogger) {
+    public function __construct(\Logger $oLogger, \FileSystem $oFileSystem) {
         $this->_oLogger = $oLogger;
+        $this->_oFileSystem = $oFileSystem;
         if (!function_exists('geoip_database_info')) {
             throw new \Exception('GeoIp module is not installed.');
         }
-        if (!is_dir($this->_sTmpDbPath)) {
-            mkdir($this->_sTmpDbPath, 0777, true);
+        if (!$this->_oFileSystem->is_dir($this->_sTmpDbPath)) {
+            $this->_oFileSystem->mkdir($this->_sTmpDbPath, 0777, true);
         } elseif (!is_writable($this->_sTmpDbPath)) {
-            chmod($this->_sTmpDbPath, 0777);
+            $this->_oFileSystem->chmod($this->_sTmpDbPath, 0777);
         }
-        if (!is_dir($this->_sArchiveDbPath)) {
-            mkdir($this->_sArchiveDbPath, 0777, true);
+        if (!$this->_oFileSystem->is_dir($this->_sArchiveDbPath)) {
+            $this->_oFileSystem->mkdir($this->_sArchiveDbPath, 0777, true);
         } elseif (!is_writable($this->_sArchiveDbPath)) {
-            chmod($this->_sArchiveDbPath, 0777);
+            $this->_oFileSystem->chmod($this->_sArchiveDbPath, 0777);
         }
-        if (!is_dir($this->_sDbPath)) {
+        if (!$this->_oFileSystem->is_dir($this->_sDbPath)) {
             throw new \Exception($this->_sDbPath.' is not a directory.');
         } elseif (!is_writable($this->_sDbPath)) {
             throw new \Exception($this->_sDbPath.' is not writable.');
         }
+    }
 
-        //Loading IP and URL's lists
-        $this->_aValidationItems = $this->_csvToArray(VALIDATION_LIST_CSV);
-        $this->_aDbFiles = $this->_csvToArray(DB_URL_LIST_CSV);
+    /**
+     * @param array $aDbFiles
+     * @return $this
+     */
+    public function setDbFiles(array $aDbFiles) {
+        $this->_aDbFiles = $aDbFiles;
+        return $this;
+    }
+
+    /**
+     * @param array $aValidationItems
+     * @return $this
+     */
+    public function setValidationItems(array $aValidationItems) {
+        $this->_aValidationItems = $aValidationItems;
+        return $this;
     }
 
     /**
      * When done, we remove tmp files and display the resulting DB version.
      */
     public function __destruct() {
-        $this->_emptyDir($this->_sTmpDbPath);
+        $this->_oFileSystem->emptyDir($this->_sTmpDbPath);
         $this->_oLogger->log('DB version is now '.geoip_database_info());
     }
 
@@ -100,10 +126,12 @@ class GeoIpUpdater {
      * Loads new DB files
      * Validates that GeoIp works with newly loaded files using the validation items
      * If validation fails, rolls back to previous version and blacklists the faulty version
+     *
+     * @param \Gzip $oGzip
      */
-    public function update() {
+    public function update(\Gzip $oGzip) {
         $this->_archiveDbFiles($this->_sDbPath);
-        $this->_retrieveDbFiles();
+        $this->_retrieveDbFiles($oGzip);
         $this->_checkDbFiles();
         $this->_archiveDbFiles($this->_sTmpDbPath);
         $this->_loadDbFiles($this->_sTmpDbPath);
@@ -129,8 +157,10 @@ class GeoIpUpdater {
      * @throws Exception
      */
     public function _rollbackToPrevious() {
+        $this->_oLogger->log('Roll back');
+
         //Which version should be loaded? If current version is in the archives, we load the previous one, otherwise, we load latest archived version.
-        $aArchivedDbFolders = $this->_scanDir($this->_sArchiveDbPath, 1);
+        $aArchivedDbFolders = $this->_oFileSystem->scanDir($this->_sArchiveDbPath, 1);
         $sCurrentVersion = $this->_getDbVersion($this->_sDbPath);
         $this->_oLogger->log('Current version : '.$sCurrentVersion);
         $iLevel = 0;
@@ -156,15 +186,18 @@ class GeoIpUpdater {
 
     /**
      * Calls GeoIP functions to check that it returns the expected results for a given pool of known IP addresses/hosts.
+     * This method can't throw exceptions, we must roll back if validation fails.
+     * If validation cannot be done (no item or invalid validation item), we skip it!
      * @return bool
      */
     protected function _validateDbFiles() {
+        $this->_oLogger->log('DB files Validation.');
         if (empty($this->_aValidationItems)) {
-            $this->_oLogger->log('There are no validation item to test in .'.VALIDATION_LIST_CSV);
+            $this->_oLogger->log('Skipping validation. There are no validation item to test in .'.VALIDATION_LIST_CSV);
         } else if (!$this->_validateIpList()) {
-            $this->_oLogger->log('Validation failed, each validation item in '.DB_URL_LIST_CSV.' must be specify a geoip function, a host or IP and a result (ISO country code, region... See http://us1.php.net/manual/fr/ref.geoip.php)');
+            $this->_oLogger->log('Skipping validation. Each validation item in '.DB_URL_LIST_CSV.' must be specify a geoip function, a host or IP and a result (ISO country code, region... See http://us1.php.net/manual/fr/ref.geoip.php)');
         } else {
-            $this->_oLogger->log('There are '.count($this->_aValidationItems).' items to test.');
+            $this->_oLogger->log('There are '.count($this->_aValidationItems).' validation items to run.');
             foreach ($this->_aValidationItems as $aValidationItem) {
                 $this->_oLogger->log('Testing function \''.$aValidationItem[0].'\' with argument : '.$aValidationItem[1].' and expecting result : '.$aValidationItem[2]);
                 $sCmd = 'php -r "echo '.$aValidationItem[0].'(\''.$aValidationItem[1].'\');"';
@@ -200,6 +233,8 @@ class GeoIpUpdater {
      * @throws Exception
      */
     protected function _loadDbFiles($sPath) {
+        $this->_oLogger->log('Loading DB files.');
+
         //Checking current DB files are up to date.
         $sNewVersion = $this->_getDbVersion($sPath);
         $sCurrentVersion = $this->_getDbVersion($this->_sDbPath);
@@ -208,14 +243,14 @@ class GeoIpUpdater {
         }
 
         //Loading files
-        $aDbFiles = glob($sPath.DIRECTORY_SEPARATOR."*");
+        $aDbFiles = $this->_oFileSystem->glob($sPath.DIRECTORY_SEPARATOR."*");
         if (is_array($aDbFiles) && count($aDbFiles) > 1) {
             if (!in_array($sPath.DIRECTORY_SEPARATOR.self::DB_VERSION_FILE_NAME, $aDbFiles)) {
                 throw new \Exception('Cannot load DB files from '.$sPath.', there is no hash file.');
             }
             foreach ($aDbFiles as $sDbFile) {
                 $this->_oLogger->log('Loading '.$sDbFile.' to '.$this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
-                copy($sDbFile, $this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
+                $this->_oFileSystem->copy($sDbFile, $this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
             }
         } else {
             throw new \Exception('Cannot load DB files from '.$sPath.', there are no files!.');
@@ -224,24 +259,24 @@ class GeoIpUpdater {
 
     /**
      * Makes an archive folder for the new DB files. If the archive already exists, it skips it.
-     * @todo : Pass the db files path as parameter, so we can archive any set of db files
-     * @todo : make it faster when archive already exists, and make it quieter too
      */
     protected function _archiveDbFiles($sDbPath) {
+        $this->_oLogger->log('Archiving DB files from '.$sDbPath);
+
         //Clean first
         $this->_cleanArchives();
         $sVersionToArchive = $this->_getDbVersion($sDbPath);
         $sArchiveDbPath = $this->_sArchiveDbPath.DIRECTORY_SEPARATOR.date('YmdHis').'_'.$sVersionToArchive;
-        $aExistingArchives = glob($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.'*_'.$sVersionToArchive);
+        $aExistingArchives = $this->_oFileSystem->glob($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.'*_'.$sVersionToArchive);
         if (is_array($aExistingArchives) && count($aExistingArchives) > 0) {
             $this->_oLogger->log('Archive for version '.$sVersionToArchive.' already exists in '.implode(' ', $aExistingArchives));
         } else {
-            $this->_oLogger->log('Archiving DB files from '.$sDbPath.' in '.$sArchiveDbPath);
-            mkdir($sArchiveDbPath, 0777, true);
-            $aDbFiles = glob($sDbPath.DIRECTORY_SEPARATOR."*");
+            $this->_oLogger->log('Archiving to '.$sArchiveDbPath);
+            $this->_oFileSystem->mkdir($sArchiveDbPath, 0777, true);
+            $aDbFiles = $this->_oFileSystem->glob($sDbPath.DIRECTORY_SEPARATOR."*");
             if (is_array($aDbFiles)) {
                 foreach ($aDbFiles as $sDbFile) {
-                    copy($sDbFile, $sArchiveDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
+                    $this->_oFileSystem->copy($sDbFile, $sArchiveDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
                 }
             }
         }
@@ -251,14 +286,14 @@ class GeoIpUpdater {
      * Cleans up the archive dir, keeping the number of archives version to its maximum.
      */
     protected function _cleanArchives() {
-        $aArchivedDbVersions = $this->_scanDir($this->_sArchiveDbPath, 1);
+        $aArchivedDbVersions = $this->_oFileSystem->scanDir($this->_sArchiveDbPath, 1);
         $aOlderDbVersions = array_slice($aArchivedDbVersions, MAX_ARCHIVED_DB_VERSIONS);
         if (is_array($aOlderDbVersions) && !empty($aOlderDbVersions)) {
             $this->_oLogger->log('There are '.count($aArchivedDbVersions).' archived versions, the oldest will be removed.');
             foreach ($aOlderDbVersions as $sOlderDbVersion) {
-                if (is_dir($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sOlderDbVersion)) {
+                if ($this->_oFileSystem->is_dir($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sOlderDbVersion)) {
                     $this->_oLogger->log('Removing '.$this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sOlderDbVersion);
-                    $this->_emptyDir($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sOlderDbVersion, true);
+                    $this->_oFileSystem->emptyDir($this->_sArchiveDbPath.DIRECTORY_SEPARATOR.$sOlderDbVersion, true);
                 }
             }
         }
@@ -268,33 +303,16 @@ class GeoIpUpdater {
      * Retrieves the DB files from MaxMind and stores them in the tmp folder.
      * @throws Exception
      */
-    protected function _retrieveDbFiles () {
+    protected function _retrieveDbFiles(\Gzip $oGzip) {
+        $this->_oLogger->log('DB files retrieval.');
         if (empty($this->_aDbFiles)) {
             throw new \Exception('There are no DB file listed in '.DB_URL_LIST_CSV);
         }
-        $this->_oLogger->log('There are '.count($this->_aDbFiles).' DB files to retrieve.');
+        $this->_oLogger->log('There are '.count($this->_aDbFiles).' files to retrieve.');
         foreach ($this->_aDbFiles as $aDbFileSrc) {
             $sDbFileSrc = $aDbFileSrc[0];
             $this->_oLogger->log('Retrieving DB from '.$sDbFileSrc);
-		$sGzip = file_get_contents($sDbFileSrc);
-		$sRest = substr($sGzip, -4);
-		$iGZFileSize = end(unpack("V", $sRest));
-            $rZp = @gzopen($sDbFileSrc, "r");
-            if (!$rZp) {
-                throw new \Exception($sDbFileSrc.' could not be retrieved.');
-            }
-            $sUnzippedData = @gzread($rZp, $iGZFileSize);
-            @gzclose($rZp);
-            // Check we have data
-            if (strlen($sUnzippedData) > 0) {
-                // Write data to local file
-                $sDbFileName = str_replace('.dat.gz', '.dat', basename($sDbFileSrc));
-                $rLZFP=@fopen($this->_sTmpDbPath.DIRECTORY_SEPARATOR.$sDbFileName,"w+");
-                @fwrite($rLZFP, $sUnzippedData);
-                @fclose($rLZFP);
-            } else {
-                throw new \Exception($sDbFileSrc.' is empty.');
-            }
+            $oGzip->unzip($sDbFileSrc, $this->_sTmpDbPath.DIRECTORY_SEPARATOR.str_replace('.gz', '', basename($sDbFileSrc)),"w+");
         }
     }
 
@@ -302,11 +320,11 @@ class GeoIpUpdater {
      * Basic check of the retrieved DB files.
      * @throws Exception
      */
-    protected function _checkDbFiles () {
+    protected function _checkDbFiles() {
         $this->_oLogger->log('Checking tmp DB files (blacklist and size) in '.$this->_sTmpDbPath);
 
         //Size
-        $aDbFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*.dat");
+        $aDbFiles = $this->_oFileSystem->glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*.dat");
         if (is_array($aDbFiles)) {
             foreach ($aDbFiles as $sDbFile) {
                 if (!filesize($sDbFile)) {
@@ -332,25 +350,27 @@ class GeoIpUpdater {
      * @throws Exception
      */
     protected function _getDbVersion($sPath) {
-        if (is_dir($sPath)) {
+        $this->_oLogger->log('Building version for DB files in '.$sPath);
+        if ($this->_oFileSystem->is_dir($sPath)) {
             $VersionFilePath = $sPath.DIRECTORY_SEPARATOR.self::DB_VERSION_FILE_NAME;
 
             //Check for version file, if it exists, return version
-            if (file_exists($VersionFilePath)) {
-                $sVersion = file_get_contents($VersionFilePath);
+            if ($this->_oFileSystem->file_exists($VersionFilePath)) {
+                $sVersion = $this->_oFileSystem->file_get_contents($VersionFilePath);
+                $this->_oLogger->log('Version is '.$sVersion);
             } else {
-                $this->_oLogger->log('No hash file found. Building version from DB files in '.$sPath);
-                $aDbFiles = glob($sPath.DIRECTORY_SEPARATOR."*.dat");
+                $this->_oLogger->log('No hash file found.');
+                $aDbFiles = $this->_oFileSystem->glob($sPath.DIRECTORY_SEPARATOR."*.dat");
                 if (!is_array($aDbFiles) || count($aDbFiles) < 1) {
-                    throw new \Exception('Could not get DB version, there are no .dat files in '.$sPath);
+                    throw new \Exception('Could not get DB version, there are no .dat files.');
                 }
                 $sDbContents = '';
                 foreach ($aDbFiles as $sDbFile) {
-                    $sDbContents .= file_get_contents($sDbFile);
+                    $sDbContents .= $this->_oFileSystem->file_get_contents($sDbFile);
                 }
                 $sVersion = sha1($sDbContents);
                 $this->_oLogger->log('Calculated version '.$sVersion.' and writing it to hash file '.$VersionFilePath);
-                if (!@file_put_contents($VersionFilePath, $sVersion)) {
+                if (!@$this->_oFileSystem->file_put_contents($VersionFilePath, $sVersion)) {
                     $this->_oLogger->log('Could not write version to file '.$VersionFilePath);
                 }
             }
@@ -368,14 +388,14 @@ class GeoIpUpdater {
     protected function _isVersionBlackListed($sVersion) {
         $sBlackistFilePath = GEOIP_DOCROOT.DIRECTORY_SEPARATOR.self::BLACKLIST_FILE_NAME;
         $bBlacklisted = false;
-        if (file_exists($sBlackistFilePath)) {
-            $handle = fopen($sBlackistFilePath, 'r');
-            while (($buffer = fgets($handle)) !== false) {
+        if ($this->_oFileSystem->file_exists($sBlackistFilePath)) {
+            $handle = $this->_oFileSystem->fopen($sBlackistFilePath, 'r');
+            while (($buffer = $this->_oFileSystem->fgets($handle)) !== false) {
                 if (strpos($buffer, $sVersion) !== false) {
                     $bBlacklisted = true;
                 }
             }
-            fclose($handle);
+            $this->_oFileSystem->fclose($handle);
         }
         return $bBlacklisted;
     }
@@ -389,70 +409,19 @@ class GeoIpUpdater {
         //Writing version in blacklist file
         $this->_oLogger->log('Blacklisting '.$sVersion);
         $sBlackistFilePath = GEOIP_DOCROOT.DIRECTORY_SEPARATOR.self::BLACKLIST_FILE_NAME;
-        if (!@file_put_contents($sBlackistFilePath, $sVersion."\n", FILE_APPEND)) {
+        if (!@$this->_oFileSystem->file_put_contents($sBlackistFilePath, $sVersion."\n", FILE_APPEND)) {
             $this->_oLogger->log('Could not blacklist version '.$sVersion.' in '.$sBlackistFilePath);
         }
 
         //Removing blacklisted archive
-        $aArchives = glob($this->_sArchiveDbPath.DIRECTORY_SEPARATOR."*_".$sVersion);
+        $aArchives = $this->_oFileSystem->glob($this->_sArchiveDbPath.DIRECTORY_SEPARATOR."*_".$sVersion);
         if (is_array($aArchives)) {
             foreach ($aArchives as $sArchivePath) {
                 if (strpos($sArchivePath, $sVersion)) {
                     $this->_oLogger->log('Removing archive for '.$sVersion);
-                    $this->_emptyDir($sArchivePath, true);
+                    $this->_oFileSystem->emptyDir($sArchivePath, true);
                 }
             }
         }
-    }
-
-    /**
-     * Utils
-     * Returns a list of files/folders within a given folder. It omits the '.' and '..' entries.
-     * @param $sDir
-     * @param null $iSort
-     * @return array
-     * @todo : move to a Filesystem class
-     */
-    protected function _scanDir($sDir, $iSort = null) {
-        $aExcludeList = array(".", "..");
-        return array_values(array_diff(scandir($sDir, $iSort), $aExcludeList));
-    }
-
-    /**
-     * Utils : Recursively empties a dir, optionally removes the dir.
-     * @param $sDir
-     * @param bool $bRemoveDir
-     * @todo : move to a Filesystem class
-     */
-    protected function _emptyDir($sDir, $bRemoveDir = false) {
-        if (!$dh = @opendir($sDir)) return;
-        while (false !== ($obj = readdir($dh))) {
-            if ($obj=='.' || $obj=='..') continue;
-            if (!@unlink($sDir.'/'.$obj)) $this->_emptyDir($sDir.'/'.$obj, true);
-        }
-        closedir($dh);
-        if ($bRemoveDir === true) {
-            @rmdir($sDir);
-        }
-    }
-
-    /**
-     * Utils
-     * @param $sCsvFilePath
-     * @return array
-     * @throws Exception
-     * @todo : move to a CSV class
-     */
-    protected function _csvToArray($sCsvFilePath) {
-        $aCsvContent = array();
-        if (($rHandle = fopen($sCsvFilePath, "r")) !== FALSE) {
-            while (($aData = fgetcsv($rHandle, 1000, ",", '"')) !== FALSE) {
-                $aCsvContent[] = $aData;
-            }
-            fclose($rHandle);
-        } else {
-            throw new \Exception('File '.$sCsvFilePath.' not found.');
-        }
-        return $aCsvContent;
     }
 }
