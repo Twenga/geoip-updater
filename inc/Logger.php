@@ -31,6 +31,14 @@ class Logger {
         if ($this->_bVerbose === true) {
             echo $sContent."\n";
         }
-        $this->_sContent .= $sContent;
+        $this->_sContent .= "\n".$sContent;
+    }
+
+    /**
+     * Gets log contents
+     * @return $sContent
+     */
+    public function getContent() {
+        return $this->_sContent;
     }
 }

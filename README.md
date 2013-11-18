@@ -45,7 +45,7 @@ Note : Default URLs come from http://dev.maxmind.com/geoip/legacy/geolite
 ### Update
 
 ```bash
-$ sudo php geoip-updater -v -m update
+$ sudo php geoip-updater.php -v -m update
 ```
 
 When a set of DB files is retrieved, GeoIP Updater computes a 'version' hash (sha1 of all DB files contents) and will archive these files in a directory for that version. When a set of DB files are not valid, the version is blacklisted and will never be loaded again.
@@ -53,7 +53,7 @@ When a set of DB files is retrieved, GeoIP Updater computes a 'version' hash (sh
 ### Rollback
 
 ```bash
-$ sudo php geoip-updater -v -m rollback
+$ sudo php geoip-updater.php -v -m rollback
 ```
 
 A rollback will attempt to load the previous set of DB files from the archives. If there are no older archived version, rollback will stop. If the loaded archive is not valid, the rollback will attempt to load the next older version and so on.

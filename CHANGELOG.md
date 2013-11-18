@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+## Version 1.2.7 (2013-11-18)
+
+Features:
+
+  - PHP errors on failures. Shell can now catch errors if PHP return code is not 0.
+  - Dependency injection
+
 ## Version 1.2.6 (2013-11-13)
 
 Features:
