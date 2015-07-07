@@ -2,30 +2,68 @@ GeoIP Updater
 ==========
 
 ## Description
-GeoIP Updater is a PHP tool that helps updating the GeoIPLite databases. It will retrieve DB files from MaxMind (based on a list of URLs stored as CSV), archive older DB files, validate
-and then load the new DB files in the GeoIP DB directory.
+GeoIP Updater is a PHP tool that helps updating the GeoIP databases :
+  - Retrieve DB files from MaxMind (based on a list of URLs stored as CSV)
+  - Archive older DB files
+  - Validate DB files
+  - Load the new DB files in the GeoIP DB directory
 
-IMPORTANT : GeoIP Updater will attempt to write DB files in the GeoIP DB directory (/usr/share/GeoIP by default) which belongs to user root. Therefore, GeoIP requires to be executed as root.
+This tool can work with the 3 types of DB files :
+  - Lite (Free version)
+  - Legacy (Paid version, old format compatible with PHP API)
+  - GeoIP2 (Paid version, new format, requires using a new API)
+
+IMPORTANT : For Lite or Legacy types, GeoIP Updater will attempt to write DB files in the GeoIP DB directory (/usr/share/GeoIP by default) which belongs to user root. Therefore, GeoIP requires to be executed as root.
 
 ## Requirements
 
   - PHP 5.x
-  - GeoIp
+  - Lite and Legacy (for validating DB's) : GeoIp => http://us2.php.net/manual/en/geoip.setup.php
 
 ## Installation
-In the directory of your choice, e.g. `~/geoip-updater`:
+In the directory of your choice :
 
 ```bash
-$ git clone https://github.com/Twenga/geoip-updater.git
+$ git clone git@gitlab.prod.twenga.lan:aa/geoip-updater.git
 $ cd geoip-updater
 $ ./install.sh
 ```
 
+The install script will simply create working directories such as /tmp/GeoIP, /usr/share/GeoIP_Archives. These paths can be edited in conf/config.php
+
 ## Configuring GeoIP Updater
+
+### Folders
+
+GeoIP needs to know 3 paths : 
+- Directory to copy the final DB files
+- Directory to archive DB files
+- A temporary directory that will be used for intermediate tasks
+
+These configuration can be edited for each type of DB with the following constants (see conf/config.php) : 
+- XXX_DB_PATH
+- XXX_DB_ARCHIVE_PATH
+- XXX_DB_TMP_PATH
+
+Where XXX can be GEOIP_LITE, GEOIP_LEGACY or GEOIP2.
+
+Notes : 
+- When using Lite and Legacy through the native PHP API will, by default, use the folder /usr/share/GeoIP.
+- For GeoIP2, there is no default folder, Paths to GeoIP DB files must be specified when using the GeoIP PHP API.
+
+### License key
+
+Legacy and GeoIP2 are paid versions of GeoIP. Accessing the available DB files through HTTP requires sending a license key as part of the request.
+
+This **MUST** be setup for updating **Legacy and GeoIP2** DB types. 
+ 
+Use the **MAXMIND_LICENSE_KEY** constant in conf/config.php to specify a valid MaxMind license key that will be sent in the license_key HTTP request parameter.
 
 ### Validation items
 
-When validating a new set of DB files, GeopIP Updater will use a list of validation items. An item is made of GeoIp function name, a host/IP and the expected result. Validation items are stored in a CSV file inc/validation_list.csv which you can populate with your own validation items as follow :
+IMPORTANT : This feature is available for GeoIP **Lite and Legacy only**. These DB's can be used through the native PHP API and can be easily validated. For GeoIP2, an additional API is required and GeoIP Updater can not be responsible for setting it up in order to validate GeoIP2 DB files.
+
+When validating a new set of DB files, GeoIP Updater will use a list of validation items. An item is made of a GeoIp function name, a host/IP and the expected result. Validation items are stored in a CSV file inc/validation_list.csv which you can populate with your own validation items as follow :
 
 ```
 [GEOIP_FUNCTION],[IP_HOST],[EXPECTED_RESULT]
@@ -36,9 +74,11 @@ For now, the expected result can only be specified as a string, that means we ca
 
 ### DB files URLs
 
-The file `inc/db_url_list.csv` contains a list of URLs to MaxMind GeoIPLite DB files. GeoIP Updater comes with a default list, which you can update as needed.
+The files `inc/db_url_list_XXX.csv` contain lists of URLs to MaxMind GeoIP DB files. GeoIP Updater comes with default lists for each type, which you can update as needed.
 
-Note : Default URLs come from http://dev.maxmind.com/geoip/legacy/geolite
+Default URLs come from :
+  - http://dev.maxmind.com/geoip/legacy/geolite (Lite)
+  - https://www.maxmind.com/en/download_files (Legacy and GeoIP2)
 
 ## Usage
 
@@ -48,7 +88,7 @@ Note : Default URLs come from http://dev.maxmind.com/geoip/legacy/geolite
 $ sudo php geoip-updater.php -v -m update
 ```
 
-When a set of DB files is retrieved, GeoIP Updater computes a 'version' hash (sha1 of all DB files contents) and will archive these files in a directory for that version. When a set of DB files are not valid, the version is blacklisted and will never be loaded again.
+When a set of DB files is retrieved, GeoIP Updater computes a 'version' hash (sha1 of all DB files contents) and will archive these files in a directory for that version. When a set of DB files is not valid, the version is blacklisted and will never be loaded again.
 
 ### Rollback
 
@@ -58,6 +98,64 @@ $ sudo php geoip-updater.php -v -m rollback
 
 A rollback will attempt to load the previous set of DB files from the archives. If there are no older archived version, rollback will stop. If the loaded archive is not valid, the rollback will attempt to load the next older version and so on.
 
+## Options
+
+### Mode : -m \[mode\]
+
+Specifies GeoIP Updater mode.
+
+Values :
+  - update
+  - rollback
+
+### Type : -t \[type\] (optional)
+
+Specifies the type of DB files to update.
+
+Values :
+  - Lite (default)
+  - Legacy
+  - GeoIP2
+  
+### Verbose : -v (optional)
+  
+Specifies whether GeoIP should output logs to the console.
+
+#### Notes
+Files are packaged differently from a type to another :
+
+<table>
+    <tr>
+        <td>Type</td>
+        <td>Package</td>
+        <td>City DB (=> path/to/destination)</td>
+        <td>Country DB (=> path/to/destination</td>
+    </tr>
+     <tr>
+        <td>Lite</td>
+        <td>Gzip</td>
+        <td>GeoIPLiteCity.dat => /usr/share/GeoIP/GeoIPCity.dat</td>
+        <td>GeoIP.dat => /usr/share/GeoIP/GeoIP.dat</td>
+    </tr>
+    <tr>
+        <td>Legacy</td>
+        <td>Tar.gz</td>
+        <td>/GeoIP-133_XXX/GeoIPCity.dat => /usr/share/GeoIP/GeoIPCity.dat</td>
+        <td>/GeoIP-106_XXX/GeoIP-106_XXX.dat => /usr/share/GeoIP/GeoIP.dat</td>
+    </tr>
+     <tr>
+        <td>GeoIP2</td>
+        <td>Tar.gz</td>
+        <td>/GeoIP2-City_XXX/GeoIP2-City.mmdb</td>
+        <td>/GeoIP2-Country_XXX/GeoIP2-Country.mmdb</td>
+    </tr>
+</table>
+
+XXX = DB file timestamp
+
+- For Lite and Legacy types, GeoIP Updater renames .dat files.
+- For GeoIP2, it's up to the application to load the appropriate GeoIP2 MMDB.
+
 ## Working with GeoIP Updater
 
 GeoIP Updater can be used manually but it can also be executed automatically by Crontab. If several servers are to be updated, it may be a good practice to run GeoIP Updater on a "master" server which will validate the DB files and then deploy them to other servers.
@@ -66,7 +164,7 @@ GeoIP Updater can be used manually but it can also be executed automatically by 
 
 ### DB versions
 
-geoip_database_info() already returns the DB files versions but it has to be called for every DB file and it would be too much of a hassle to keep track of each file's version.
+When using Lite or Legacy with the PHP API, geoip_database_info() already returns the DB files versions but it has to be called for every DB file and it would be too much of a hassle to keep track of each file's version.
 
 GeoIP Updater builds an 'overall' version for a given set of db files. It's basically a SHA-1 of the files contents.
 
@@ -81,6 +179,8 @@ If a version is already archived, GeoIp Updater will just tell you about it.
 The maximum number of archives can be configured in the conf/config.php file.
 
 ### Validation
+
+**For Lite and Legacy only.**
 
 To make sure that the loaded DB files actually work, we simply call GeoIp functions and check that they return expected results for given parameters. The functions, IP/hosts and expected results are to be listed in the inc/validation_list.csv file.
 

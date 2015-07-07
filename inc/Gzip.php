@@ -9,7 +9,7 @@ class Gzip {
      * @throws Exception
      */
     public function unzip($sSource, $sDestination) {
-        $sGzip = file_get_contents($sSource);
+        $sGzip = @file_get_contents($sSource);
         if (!$sGzip) {
             throw new \Exception($sSource.' could not be reached.');
         }
@@ -25,11 +25,12 @@ class Gzip {
         if (strlen($sUnzippedData) > 0) {
             // Write data to local file
             $rLZFP = @fopen($sDestination, "w+");
-            @fwrite($rLZFP, $sUnzippedData);
+            if (false === @fwrite($rLZFP, $sUnzippedData)) {
+                throw new \Exception($sSource.' could not write unzipped data to '.$sDestination);
+            }
             @fclose($rLZFP);
-            return true;
         } else {
-            throw new \Exception($sSource.' could not be read.');
+            throw new \Exception('Could not read zipped data from '.$sSource);
         }
     }
 }

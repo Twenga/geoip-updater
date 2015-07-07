@@ -1,49 +1,64 @@
 <?php
 /**
  * GeoIp Updater script
- * Updates the GeoIpLite DB files. Stores older versions, allows rolling back.
- * Must be executed as root!
+ * Gathers options
+ * Forges a GeoIPUpdater object
+ * Run the required method
+ * Catches exceptions and triggers PHP errors
  */
-require_once('conf/config.php');
-require_once('inc/GeoIPUpdater.php');
-require_once('inc/Logger.php');
-require_once('inc/FileSystem.php');
-require_once('inc/Csv.php');
-require_once('inc/Gzip.php');
 
 //Making sure user errors are reported and that php writes errors to stderr
 error_reporting(error_reporting() | E_USER_ERROR);
 ini_set('display_errors', 'stderr');
 
-//Checking for switch
+//Including vital stuff
+require_once('conf/config.php');
+require_once('inc/GeoIPUpdater/Factory.php');
+require_once('inc/Logger.php');
+require_once('inc/FileSystem.php');
+require_once('inc/Csv.php');
+require_once('inc/Gzip.php');
+
+//Checking for on/off switch
 if (defined('DISABLE_GEOIP_UPDATER') && DISABLE_GEOIP_UPDATER === true) {
     die('GeoIP Updater is disabled. See inc/config.php to enable.');
 }
 
 //CLI options
-$sShortopts  = "";
-$sShortopts .= "m:";  // Required value, mode
+$sShortopts = "m:t:";  // Required value, mode
 $sShortopts .= "v"; // Optional value, verbose
 $aOptions = getopt($sShortopts);
 
+//Available GeoIP modes
+$aGeoIPModes = \GeoIpUpdater\Factory::getModes();
+
 //Start
 try {
+    //Get GeoIP type from t option
+    if (isset($aOptions['t']) && !in_array($aOptions['t'], $aGeoIPModes)) {
+        throw new \Exception('Unknown GeoIP DB type. Available types are : '.implode(', ', $aGeoIPModes));
+    } else {
+        $sType = isset($aOptions['t'])?$aOptions['t']:null;
+    }
+
+    //Setup logger
     $oLogger = new \Logger();
     $oLogger->setVerbose(isset($aOptions['v'])?true:false);
-    $oGeoIpUpdater = new \GeoIpUpdater($oLogger, new \FileSystem());
-    $oGeoIpUpdater->setDbFiles(\Csv::csvToArray(DB_URL_LIST_CSV))
-        ->setValidationItems(\Csv::csvToArray(VALIDATION_LIST_CSV));
+
+    //Forge a GeoIP Updater object
+    $oGeoIpUpdater = \GeoIpUpdater\Factory::forge($sType, $oLogger, new \FileSystem());
     switch ($aOptions['m']) {
         case 'update' :
-            $oGeoIpUpdater->update(new \Gzip());
+            $oGeoIpUpdater->update();
             break;
         case 'rollback' :
             $oGeoIpUpdater->rollback();
             break;
         default :
-            echo "Please specifiy a mode. Usage : -m=update|rollback\n";
+            echo "Please specify a mode. Usage : -m=[update|rollback]\n";
             break;
     }
 } catch (\Exception $oException) {
-    trigger_error($oException->getMessage(), E_USER_ERROR); // We want exceptions to trigger errors that will make PHP return a 255 code to shell.
+    // We want exceptions to trigger errors that will make PHP return a 255 code to shell.
+    trigger_error($oException->getMessage(), E_USER_ERROR);
 }
