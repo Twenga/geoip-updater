@@ -35,6 +35,7 @@ define('MAX_ARCHIVED_DB_VERSIONS', 10);
  * CSV file that lists validation items.
  */
 define('VALIDATION_LIST_CSV', GEOIP_RESOURCES.DIRECTORY_SEPARATOR.'validation_list.csv');
+define('VALIDATION_LIST_CSV_GEOIP2', GEOIP_RESOURCES.DIRECTORY_SEPARATOR.'validation_list_geoip2.csv');
 
 /**
  * CSV file that lists the DB files sources
@@ -48,4 +49,4 @@ define('DB_URL_LIST_CSV_GEOIP2', GEOIP_RESOURCES.DIRECTORY_SEPARATOR.'db_url_lis
  */
 define('MAXMIND_LICENSE_KEY', '');
 
-define('MAXMIND_PHP_API_AUTOLOAD', '/home/nseddiki/geoip_tests/vendor/autoload.php');
+define('MAXMIND_PHP_API_AUTOLOAD', '');

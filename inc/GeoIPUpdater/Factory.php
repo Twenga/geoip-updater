@@ -56,7 +56,8 @@ class Factory {
                 break;
             case static::GEOIP2 :
                 $oInstance = new GeoIP2($oLogger, $oFileSystem, new PharData());
-                $oInstance->setDbFiles(\Csv::csvToArray(DB_URL_LIST_CSV_GEOIP2));
+                $oInstance->setDbFiles(\Csv::csvToArray(DB_URL_LIST_CSV_GEOIP2))
+                    ->setValidationItems(\Csv::csvToArray(VALIDATION_LIST_CSV_GEOIP2));
                 break;
             default :
                 $oInstance = new GeoIP\Lite($oLogger, $oFileSystem, new Gzip());
