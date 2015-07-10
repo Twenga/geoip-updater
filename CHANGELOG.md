@@ -1,7 +1,7 @@
 ChangeLog
 =========
 
-## Version 1.3.0 (2015-07-07)
+## Version 1.3.1 (2015-07-10)
 
 Features:
 

@@ -2,18 +2,17 @@ GeoIP Updater
 ==========
 
 ## Description
-GeoIP Updater is a PHP tool that helps updating the GeoIP databases :
+
+GeoIP Updater is a PHP program that helps updating the GeoIP databases :
   - Retrieve DB files from MaxMind (based on a list of URLs stored as CSV)
   - Archive older DB files
   - Validate DB files
   - Load the new DB files in the GeoIP DB directory
 
-This tool can work with the 3 types of DB files :
+This program works with the 3 types of DB files :
   - Lite (Free version)
-  - Legacy (Paid version, old format compatible with PHP API)
-  - GeoIP2 (Paid version, new format, requires using a new API)
-
-IMPORTANT : For Lite or Legacy types, GeoIP Updater will attempt to write DB files in the GeoIP DB directory (/usr/share/GeoIP by default) which belongs to user root. Therefore, GeoIP requires to be executed as root.
+  - Legacy (Paid version, old .dat format)
+  - GeoIP2 (Paid version, new .mmdb format)
 
 ## Requirements
 
@@ -21,6 +20,7 @@ IMPORTANT : For Lite or Legacy types, GeoIP Updater will attempt to write DB fil
   - Lite and Legacy (for validating DB's) : GeoIp => http://us2.php.net/manual/en/geoip.setup.php
 
 ## Installation
+
 In the directory of your choice :
 
 ```bash
@@ -31,7 +31,7 @@ $ ./install.sh
 
 The install script will simply create working directories such as /tmp/GeoIP, /usr/share/GeoIP_Archives. These paths can be edited in conf/config.php
 
-## Configuring GeoIP Updater
+## Configuration
 
 ### Folders
 
@@ -53,24 +53,47 @@ Notes :
 
 ### License key
 
-Legacy and GeoIP2 are paid versions of GeoIP. Accessing the available DB files through HTTP requires sending a license key as part of the request.
-
-This **MUST** be setup for updating **Legacy and GeoIP2** DB types. 
+**Legacy** and **GeoIP2** are paid versions of GeoIP. Accessing the available DB files through HTTP requires sending a license key as part of the request.
  
-Use the **MAXMIND_LICENSE_KEY** constant in conf/config.php to specify a valid MaxMind license key that will be sent in the license_key HTTP request parameter.
+You can configure the **MAXMIND_LICENSE_KEY** constant in conf/config.php to specify a valid MaxMind license key.
 
-### Validation items
+### Validation
 
-IMPORTANT : This feature is available for GeoIP **Lite and Legacy only**. These DB's can be used through the native PHP API and can be easily validated. For GeoIP2, an additional API is required and GeoIP Updater can not be responsible for setting it up in order to validate GeoIP2 DB files.
+For DB files validation, GeoIP Updater will use PHP. There are 2 PHP API's depending on the DB type : 
+  - Lite and Legacy : PHP API  => http://php.net/manual/en/ref.geoip.php
+  - GeoIP2 : MaxMind PHP API for GeoIP2 => https://github.com/maxmind/GeoIP2-php
 
-When validating a new set of DB files, GeoIP Updater will use a list of validation items. An item is made of a GeoIp function name, a host/IP and the expected result. Validation items are stored in a CSV file inc/validation_list.csv which you can populate with your own validation items as follow :
+These API's should be available in order to enable DB files validation.
+
+#### Validation items (Lite and Legacy)
+
+For validating a set of DB files, GeoIP Updater will use a list of validation items. An item is made of : 
+  - A GeoIp function name (PHP API)
+  - A host/IP 
+  - An expected result. 
+
+Validation items are stored in a CSV file inc/validation_list.csv which you can populate with your own validation items as follows :
 
 ```
-[GEOIP_FUNCTION],[IP_HOST],[EXPECTED_RESULT]
-[GEOIP_FUNCTION],[IP_HOST],[EXPECTED_RESULT]
+"geoip_country_code_by_name","xx.xx.xx.xx","Country code"
+"geoip_country_code_by_name","xx.xx.xx.xx","Country code"
 ```
+
+NOTE : Use commas as separators and double quotes as enclosure.
 
 For now, the expected result can only be specified as a string, that means we can't validate that geoip_record_by_name() works as it returns an array.
+
+#### Validation items (GeoIP2)
+
+Validation items for GeoIP2 are stored in a CSV file inc/validation_list_geoip2.csv and are formatted as follows : 
+
+```
+"city->name","xx.xx.xx.xx","City name","GeoIP2-City.mmdb"
+"country->name","xx.xx.xx.xx","Country name","GeoIP2-City.mmdb"
+```
+
+NOTES :
+- You only specify the NAME of the DB file, the path to the file is specified by GEOIP2_DB_PATH in conf/config.php
 
 ### DB files URLs
 
@@ -153,22 +176,19 @@ Files are packaged differently from a type to another :
 
 XXX = DB file timestamp
 
-- For Lite and Legacy types, GeoIP Updater renames .dat files.
+Notes :
+- For Lite and Legacy types, GeoIP Updater renames .dat files to GeoIP.dat and GeoIPCity.dat
 - For GeoIP2, it's up to the application to load the appropriate GeoIP2 MMDB.
-
-## Working with GeoIP Updater
-
-GeoIP Updater can be used manually but it can also be executed automatically by Crontab. If several servers are to be updated, it may be a good practice to run GeoIP Updater on a "master" server which will validate the DB files and then deploy them to other servers.
 
 ## Principles
 
 ### DB versions
 
-When using Lite or Legacy with the PHP API, geoip_database_info() already returns the DB files versions but it has to be called for every DB file and it would be too much of a hassle to keep track of each file's version.
+When using Lite or Legacy with the PHP API, geoip_database_info() returns the DB files versions but it has to be called for every DB file and it would be too much of a hassle to keep track of each file's version.
 
 GeoIP Updater builds an 'overall' version for a given set of db files. It's basically a SHA-1 of the files contents.
 
-The version is then written to a hash file, stored along with the db files. Newt time we need this DB set version, we can just read the hash file.
+The version is then written to a hash file, stored along with the db files. Next time we need this DB set version, we can just read the hash file.
 
 ### Archives
 
@@ -194,4 +214,4 @@ GeoIP Updater MUST be executed by 'root' as it needs to write in /usr/share/
 
 ### To do
 
-Dependencies injection + Unit tests
+Unit tests
