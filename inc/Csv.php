@@ -2,6 +2,9 @@
 
 class Csv {
 
+    protected static $_sSeparator = ",";
+    protected static $_sEnclosure = '"';
+
     /**
      * Utils
      * @param $sCsvFilePath
@@ -11,7 +14,7 @@ class Csv {
     static public function csvToArray($sCsvFilePath) {
         $aCsvContent = array();
         if (($rHandle = fopen($sCsvFilePath, "r")) !== FALSE) {
-            while (($aData = fgetcsv($rHandle, 1000, ",", '"')) !== FALSE) {
+            while (($aData = fgetcsv($rHandle, 1000, self::$_sSeparator, self::$_sEnclosure)) !== FALSE) {
                 $aCsvContent[] = $aData;
             }
             fclose($rHandle);

@@ -24,7 +24,7 @@ IMPORTANT : For Lite or Legacy types, GeoIP Updater will attempt to write DB fil
 In the directory of your choice :
 
 ```bash
-$ git clone git@gitlab.prod.twenga.lan:aa/geoip-updater.git
+$ git clone https://github.com/Twenga/geoip-updater.git
 $ cd geoip-updater
 $ ./install.sh
 ```

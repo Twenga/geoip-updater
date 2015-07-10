@@ -99,7 +99,7 @@ class GeoIP2 extends \GeoIPUpdater {
             $this->_oLogger->log('There are '.count($this->_aValidationItems).' validation items to run.');
             foreach ($this->_aValidationItems as $aValidationItem) {
                 $this->_oLogger->log('Testing property \''.$aValidationItem[0].'\' with argument : '.$aValidationItem[1].' and expecting result : '.$aValidationItem[2]);
-                $sCmd = 'php '.GEOIP_RESOURCES.'/validation_geoip2.php -f \''.MAXMIND_PHP_API_AUTOLOAD.'\' -d \''.$this->_sDbPath.'/'.$aValidationItem[3].'\' -a \''.$aValidationItem[1].'\' -r \''.$aValidationItem[2].'\' -p \''.$aValidationItem[0].'\'';
+                $sCmd = 'php '.GEOIP_RESOURCES.'/validation_geoip2.php -f \''.MAXMIND_PHP_API_AUTOLOAD.'\' -d \''.trim($this->_sDbPath).'/'.trim($aValidationItem[3]).'\' -a \''.trim($aValidationItem[1]).'\' -r \''.trim($aValidationItem[2]).'\' -p \''.trim($aValidationItem[0]).'\'';
                 $sResult = exec($sCmd);
                 if ($sResult != $aValidationItem[2]) {
                     $this->_oLogger->log('Validation failed, result "'.$sResult.'" when expecting "'.$aValidationItem[2].'"');

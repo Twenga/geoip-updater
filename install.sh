@@ -37,9 +37,19 @@ else
 fi
 
 # Validation
+
+#GeoIP (Lite and Legacy)
 if { [ -f "$RESOURCES_DIR/validation_list.csv" ] ; } then
 	echo "Config file '$RESOURCES_DIR/validation_list.csv' already exists. Please remove it before running install script again."
 else
 	echo "Copy config file from '$RESOURCES_DIR/validation_list-dist.csv' to '$RESOURCES_DIR/validation_list.csv'"
 	cp -p -n "$RESOURCES_DIR/validation_list-dist.csv" "$RESOURCES_DIR/validation_list.csv"
+fi
+
+#GeoIP2
+if { [ -f "$RESOURCES_DIR/validation_list.csv" ] ; } then
+	echo "Config file '$RESOURCES_DIR/validation_list_geoip2.csv' already exists. Please remove it before running install script again."
+else
+	echo "Copy config file from '$RESOURCES_DIR/validation_list_geoip2-dist.csv' to '$RESOURCES_DIR/validation_list_geoip2.csv'"
+	cp -p -n "$RESOURCES_DIR/validation_list_geoip2-dist.csv" "$RESOURCES_DIR/validation_list_geoip2.csv"
 fi
