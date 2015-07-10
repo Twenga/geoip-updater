@@ -56,6 +56,7 @@ abstract class GeoIP extends GeoIpUpdater{
                 }
             }
         }
+        $this->_oLogger->log('Validation OK.');
         return true;
     }
 
