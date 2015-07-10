@@ -17,7 +17,6 @@ require_once('inc/GeoIPUpdater/Factory.php');
 require_once('inc/Logger.php');
 require_once('inc/FileSystem.php');
 require_once('inc/Csv.php');
-require_once('inc/Gzip.php');
 
 //Checking for on/off switch
 if (defined('DISABLE_GEOIP_UPDATER') && DISABLE_GEOIP_UPDATER === true) {

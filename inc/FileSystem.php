@@ -36,6 +36,13 @@ class FileSystem {
     }
 
     /**
+     * @param $sDir
+     */
+    public function rmdir($sDir) {
+        rmdir($sDir);
+    }
+
+    /**
      * @param $sPath
      * @return bool
      */
@@ -118,6 +125,14 @@ class FileSystem {
      */
     public function file_exists ($sPath) {
         return file_exists($sPath);
+    }
+
+    /**
+     * @param $sSource
+     * @param $sDestination
+     */
+    public function rename($sSource, $sDestination) {
+        rename($sSource, $sDestination);
     }
 
     /**

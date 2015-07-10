@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Class Csv
+ */
 class Csv {
 
     protected static $_sSeparator = ",";

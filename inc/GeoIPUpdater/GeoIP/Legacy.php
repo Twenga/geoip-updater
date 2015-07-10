@@ -52,22 +52,26 @@ class Legacy extends GeoIP {
             $this->_oExtractor->extract(sprintf($sDbFileSrc, MAXMIND_LICENSE_KEY), $this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
 
             //Renaming and extracting .dat files to temp path root, remove extracted dirs
-            $aDatFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted'.DIRECTORY_SEPARATOR."*".DIRECTORY_SEPARATOR."*".$this->_sDbFileExtension);
+            $aDatFiles = $this->_oFileSystem->glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted'.DIRECTORY_SEPARATOR."*".DIRECTORY_SEPARATOR."*".$this->_sDbFileExtension);
             foreach ($aDatFiles as $sDatFile) {
                 if (strpos($sDatFile, 'GeoIP-106')) {
                     $sDBName = 'GeoIP.dat';
                 } else {
                     $sDBName = basename($sDatFile);
                 }
-                rename($sDatFile, $this->_sTmpDbPath.DIRECTORY_SEPARATOR.$sDBName);
+                $this->_oFileSystem->rename($sDatFile, $this->_sTmpDbPath.DIRECTORY_SEPARATOR.$sDBName);
             }
             $this->_oFileSystem->emptyDir($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
-            rmdir($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
+            $this->_oFileSystem->rmdir($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
         }
     }
 
+    /**
+     * @return mixed|void
+     * @throws \Exception
+     */
     protected function _checkConfig() {
-        if (!defined('MAXMIND_LICENSE_KEY')) {
+        if (!defined('MAXMIND_LICENSE_KEY') || MAXMIND_LICENSE_KEY == '') {
             throw new \Exception('Downloading Legacy DBs requires a license key. See MAXMIND_LICENSE_KEY in conf/config.php');
         }
     }

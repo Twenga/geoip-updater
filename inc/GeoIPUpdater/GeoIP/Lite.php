@@ -44,6 +44,17 @@ class Lite extends GeoIP {
             $sDbFileSrc = $aDbFileSrc[0];
             $this->_oLogger->log('Retrieving DB from '.$sDbFileSrc);
             $this->_oExtractor->extract($sDbFileSrc, $this->_sTmpDbPath);
+
+            //Renaming and extracting .dat files to temp path root, remove extracted dirs
+            $aDatFiles = $this->_oFileSystem->glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR."*".$this->_sDbFileExtension);
+            foreach ($aDatFiles as $sDatFile) {
+                if (strpos($sDatFile, 'GeoLiteCity.dat')) {
+                    $sDBName = 'GeoIPCity.dat';
+                } else {
+                    $sDBName = basename($sDatFile);
+                }
+                $this->_oFileSystem->rename($sDatFile, $this->_sTmpDbPath.DIRECTORY_SEPARATOR.$sDBName);
+            }
         }
     }
 

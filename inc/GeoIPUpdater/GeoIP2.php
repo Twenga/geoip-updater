@@ -2,6 +2,10 @@
 
 namespace GeoIPUpdater;
 
+/**
+ * Class GeoIP2
+ * @package GeoIPUpdater
+ */
 class GeoIP2 extends \GeoIPUpdater {
 
     /**
@@ -55,12 +59,12 @@ class GeoIP2 extends \GeoIPUpdater {
             $this->_oExtractor->extract(sprintf($sDbFileSrc, MAXMIND_LICENSE_KEY), $this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
 
             //Renaming and extracting .dat files to temp path root, remove extracted dirs
-            $aDatFiles = glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted'.DIRECTORY_SEPARATOR."*".DIRECTORY_SEPARATOR."*".$this->_sDbFileExtension);
+            $aDatFiles = $this->_oFileSystem->glob($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted'.DIRECTORY_SEPARATOR."*".DIRECTORY_SEPARATOR."*".$this->_sDbFileExtension);
             foreach ($aDatFiles as $sDatFile) {
-                rename($sDatFile, $this->_sTmpDbPath.DIRECTORY_SEPARATOR.basename($sDatFile));
+                $this->_oFileSystem->rename($sDatFile, $this->_sTmpDbPath.DIRECTORY_SEPARATOR.basename($sDatFile));
             }
             $this->_oFileSystem->emptyDir($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
-            rmdir($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
+            $this->_oFileSystem->rmdir($this->_sTmpDbPath.DIRECTORY_SEPARATOR.'extracted');
         }
     }
 
@@ -69,11 +73,10 @@ class GeoIP2 extends \GeoIPUpdater {
      * @throws \Exception
      */
     protected function _checkConfig() {
-        if (!defined('MAXMIND_LICENSE_KEY')) {
-            throw new \Exception('Downloading GeoIP2 DBs requires a license key. See MAXMIND_LICENSE_KEY in conf/config.php');
+        if (!defined('MAXMIND_LICENSE_KEY') || MAXMIND_LICENSE_KEY == '') {
+            throw new \Exception('Downloading GeoIP2 DB files requires a license key. See MAXMIND_LICENSE_KEY in conf/config.php');
         }
     }
-
 
     /**
      * There is no env dependencies
