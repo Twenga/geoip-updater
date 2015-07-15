@@ -14,25 +14,25 @@ fi
 # DB lists
 # Lite
 if { [ -f "$RESOURCES_DIR/db_url_list_lite.csv" ] ; } then
-	echo "Config file '$RESOURCES_DIR/db_url_list_lite.csv' already exists. Please remove it before running install script again."
+	echo "DB URL CSV file '$RESOURCES_DIR/db_url_list_lite.csv' already exists. Please remove it before running install script again."
 else
-	echo "Copy config file from '$RESOURCES_DIR/db_url_list_lite-dist.csv' to '$RESOURCES_DIR/db_url_list_lite.csv'"
+	echo "Copy DB URL CSV file from '$RESOURCES_DIR/db_url_list_lite-dist.csv' to '$RESOURCES_DIR/db_url_list_lite.csv'"
 	cp -p -n "$RESOURCES_DIR/db_url_list_lite-dist.csv" "$RESOURCES_DIR/db_url_list_lite.csv"
 fi
 
 # Legacy
 if { [ -f "$RESOURCES_DIR/db_url_list_legacy.csv" ] ; } then
-	echo "Config file '$RESOURCES_DIR/db_url_list_legacy.csv' already exists. Please remove it before running install script again."
+	echo "DB URL CSV file '$RESOURCES_DIR/db_url_list_legacy.csv' already exists. Please remove it before running install script again."
 else
-	echo "Copy config file from '$RESOURCES_DIR/db_url_list_legacy-dist.csv' to '$RESOURCES_DIR/db_url_list_legacy.csv'"
+	echo "Copy DB URL CSV file from '$RESOURCES_DIR/db_url_list_legacy-dist.csv' to '$RESOURCES_DIR/db_url_list_legacy.csv'"
 	cp -p -n "$RESOURCES_DIR/db_url_list_legacy-dist.csv" "$RESOURCES_DIR/db_url_list_legacy.csv"
 fi
 
 # GeoIP2
 if { [ -f "$RESOURCES_DIR/db_url_list_geoip2.csv" ] ; } then
-	echo "Config file '$RESOURCES_DIR/db_url_list_geoip2.csv' already exists. Please remove it before running install script again."
+	echo "DB URL CSV file '$RESOURCES_DIR/db_url_list_geoip2.csv' already exists. Please remove it before running install script again."
 else
-	echo "Copy config file from '$RESOURCES_DIR/db_url_list_geoip2-dist.csv' to '$RESOURCES_DIR/db_url_list_geoip2.csv'"
+	echo "Copy DB URL CSV file from '$RESOURCES_DIR/db_url_list_geoip2-dist.csv' to '$RESOURCES_DIR/db_url_list_geoip2.csv'"
 	cp -p -n "$RESOURCES_DIR/db_url_list_geoip2-dist.csv" "$RESOURCES_DIR/db_url_list_geoip2.csv"
 fi
 
@@ -40,16 +40,16 @@ fi
 
 #GeoIP (Lite and Legacy)
 if { [ -f "$RESOURCES_DIR/validation_list.csv" ] ; } then
-	echo "Config file '$RESOURCES_DIR/validation_list.csv' already exists. Please remove it before running install script again."
+	echo "Validation CSV file '$RESOURCES_DIR/validation_list.csv' already exists. Please remove it before running install script again."
 else
-	echo "Copy config file from '$RESOURCES_DIR/validation_list-dist.csv' to '$RESOURCES_DIR/validation_list.csv'"
+	echo "Copy Validation CSV file from '$RESOURCES_DIR/validation_list-dist.csv' to '$RESOURCES_DIR/validation_list.csv'"
 	cp -p -n "$RESOURCES_DIR/validation_list-dist.csv" "$RESOURCES_DIR/validation_list.csv"
 fi
 
 #GeoIP2
-if { [ -f "$RESOURCES_DIR/validation_list.csv" ] ; } then
-	echo "Config file '$RESOURCES_DIR/validation_list_geoip2.csv' already exists. Please remove it before running install script again."
+if { [ -f "$RESOURCES_DIR/validation_list_geoip2.csv" ] ; } then
+	echo "Validation CSV file '$RESOURCES_DIR/validation_list_geoip2.csv' already exists. Please remove it before running install script again."
 else
-	echo "Copy config file from '$RESOURCES_DIR/validation_list_geoip2-dist.csv' to '$RESOURCES_DIR/validation_list_geoip2.csv'"
+	echo "Copy Validation CSV file from '$RESOURCES_DIR/validation_list_geoip2-dist.csv' to '$RESOURCES_DIR/validation_list_geoip2.csv'"
 	cp -p -n "$RESOURCES_DIR/validation_list_geoip2-dist.csv" "$RESOURCES_DIR/validation_list_geoip2.csv"
 fi

@@ -16,12 +16,12 @@ define('GEOIP_RESOURCES', GEOIP_DOCROOT.DIRECTORY_SEPARATOR.'resources');
 //GeoIP Lite
 define('GEOIP_LITE_DB_PATH', '/usr/share/GeoIP');
 define('GEOIP_LITE_DB_ARCHIVE_PATH', '/usr/share/GeoIP_Archives/Lite');
-define('GEOIP_LITE_DB_TMP_PATH', '/tmp/GeoIP/Legacy');
+define('GEOIP_LITE_DB_TMP_PATH', '/tmp/GeoIP');
 
 //GeoIP Legacy
 define('GEOIP_LEGACY_DB_PATH', '/usr/share/GeoIP/Legacy');
 define('GEOIP_LEGACY_DB_ARCHIVE_PATH', '/usr/share/GeoIP_Archives/Legacy');
-define('GEOIP_LEGACY_DB_TMP_PATH', '/tmp/GeoIP');
+define('GEOIP_LEGACY_DB_TMP_PATH', '/tmp/GeoIP/Legacy');
 
 //GeoIP2
 define('GEOIP2_DB_PATH', '/usr/share/GeoIP2');
