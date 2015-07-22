@@ -232,7 +232,7 @@ abstract class GeoIpUpdater {
      * @throws Exception
      */
     protected function _checkDbFiles($sPath) {
-        $this->_oLogger->log('Checking tmp DB files (blacklist and size) in '.$sPath);
+        $this->_oLogger->log('Checking DB files (blacklist and size) in '.$sPath);
 
         //Size
         $aDbFiles = $this->_oFileSystem->glob($sPath."*".$this->_sDbFileExtension);
@@ -378,22 +378,22 @@ abstract class GeoIpUpdater {
         //Checking current DB files are up to date.
         $sNewVersion = $this->_getDbVersion($sPath);
         $sCurrentVersion = $this->_getDbVersion($this->_sDbPath);
-        if ($sNewVersion == $sCurrentVersion) {
-            throw new \Exception('Current version '.$sCurrentVersion.' is up to date.');
-        }
-
-        //Loading files
-        $aDbFiles = $this->_oFileSystem->glob($sPath.DIRECTORY_SEPARATOR."*".DIRECTORY_SEPARATOR);
-        if (is_array($aDbFiles) && count($aDbFiles) > 1) {
-            if (!in_array($sPath.DIRECTORY_SEPARATOR.self::DB_VERSION_FILE_NAME, $aDbFiles)) {
-                throw new \Exception('Cannot load DB files from '.$sPath.', there is no hash file.');
-            }
-            foreach ($aDbFiles as $sDbFile) {
-                $this->_oLogger->log('Loading '.$sDbFile.' to '.$this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
-                $this->_oFileSystem->copy($sDbFile, $this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
-            }
+        if ($sNewVersion != $sCurrentVersion) {
+            //Loading files
+            $aDbFiles = $this->_oFileSystem->glob($sPath.DIRECTORY_SEPARATOR."*".DIRECTORY_SEPARATOR);
+            if (is_array($aDbFiles) && count($aDbFiles) > 1) {
+                if (!in_array($sPath.DIRECTORY_SEPARATOR.self::DB_VERSION_FILE_NAME, $aDbFiles)) {
+                    throw new \Exception('Cannot load DB files from '.$sPath.', there is no hash file.');
+                }
+                foreach ($aDbFiles as $sDbFile) {
+                    $this->_oLogger->log('Loading '.$sDbFile.' to '.$this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
+                    $this->_oFileSystem->copy($sDbFile, $this->_sDbPath.DIRECTORY_SEPARATOR.basename($sDbFile));
+                }
+            } else {
+                throw new \Exception('Cannot load DB files from '.$sPath.', there are no files!.');
+            };
         } else {
-            throw new \Exception('Cannot load DB files from '.$sPath.', there are no files!.');
+            $this->_oLogger->log('DB files are already up to date.');
         }
         $this->_checkDbFiles($sPath.DIRECTORY_SEPARATOR);
     }
