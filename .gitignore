@@ -1,5 +1,8 @@
 .idea/
 conf/config.php
 blacklist.txt
-inc/db_url_list.csv
-inc/validation_list.csv
+resources/db_url_list_geoip2.csv
+resources/db_url_list_lite.csv
+resources/db_url_list_legacy.csv
+resources/validation_list_geoip2.csv
+resources/validation_list.csv

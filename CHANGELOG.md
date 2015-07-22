@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+## Version 1.3.1 (2015-07-10)
+
+Features:
+
+  - New 'type' option that takes 3 possible values : lite, legacy or geoip2. This option allows updating any of the 3 DB types.
+
 ## Version 1.2.7 (2013-11-18)
 
 Features:
