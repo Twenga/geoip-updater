@@ -95,9 +95,9 @@ class GeoIP2 extends \GeoIPUpdater {
     protected function _validateDbFiles() {
         $this->_oLogger->log('DB files Validation.');
         if (empty($this->_aValidationItems)) {
-            $this->_oLogger->log('Skipping validation. There are no validation item to test in .'.VALIDATION_LIST_CSV);
+            $this->_oLogger->log('Skipping validation. There are no validation item to test in '.VALIDATION_LIST_CSV_GEOIP2);
         } else if (!$this->_validateIpList()) {
-            $this->_oLogger->log('Validation items malformed. Each validation items must specify a GeoIP function, a host or IP and an expected result (ISO country code, region... See http://us1.php.net/manual/fr/ref.geoip.php)');
+            $this->_oLogger->log('Validation items malformed. Each validation items must specify a GeoIP2 API\'s Reader property a host or IP, an expected result and Maxmind MMDB file name to use. See README.md.');
         } else {
             $this->_oLogger->log('There are '.count($this->_aValidationItems).' validation items to run.');
             foreach ($this->_aValidationItems as $aValidationItem) {

@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+## Version 1.3.2 (2015-07-29)
+
+Fix :
+
+  - Fixing message when there is no validation item for GeoIP2.
+
 ## Version 1.3.1 (2015-07-10)
 
 Features:
