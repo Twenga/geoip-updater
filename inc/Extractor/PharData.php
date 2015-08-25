@@ -19,8 +19,13 @@ class PharData implements Extractor {
 
         //Retrieve file content and copy it locally
         $sTmpTarGz = '/tmp/phardata_'.time().'_'.rand().'.tar.gz'; //Trying to generate a somewhat unique temp file name
-        $sContents = file_get_contents($sSourceFile);
-        file_put_contents($sTmpTarGz, $sContents);
+        $sContents = @file_get_contents($sSourceFile);
+        if (!$sContents) {
+            throw new \Exception('Phar data file '.$sSourceFile.' could not be reached.');
+        }
+        if (false === @file_put_contents($sTmpTarGz, $sContents)) {
+            throw new \Exception('Could not write Phar data contents to '.$sSourceFile);
+        }
 
         //UnGzipping
         $oPhar = new \PharData($sTmpTarGz);
